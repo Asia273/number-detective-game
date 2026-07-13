@@ -1,11 +1,11 @@
 const DAILY_LEVEL = {
   id: "daily",
   title: "今日森林挑战",
-  subtitle: "每日混合题",
+  subtitle: "每日100以内混合题",
   animal: "猫头鹰老师",
   animalMark: "鹰",
-  mission: "完成 5 道今日专属题目",
-  scene: "猫头鹰老师每天都会带来一组新的森林谜题。",
+  mission: "完成 5 道今日专属的 100 以内题目",
+  scene: "猫头鹰老师每天都会带来一组新的 100 以内森林谜题。",
   dialog: "今天的题目当天固定，明天会自动换一组。",
   treasure: "每日挑战奖章",
   sticker: "今日奖章",
@@ -48,50 +48,60 @@ function shuffle(items, random) {
   return result;
 }
 
-function uniqueOptions(answer, candidates, random, min = 0, max = 20) {
-  const values = new Set([answer, ...candidates.filter((item) => item >= min && item <= max)]);
+function uniqueOptions(answer, candidates, random, min = 0, max = 100) {
+  const values = new Set([answer]);
+  candidates.forEach((item) => {
+    if (item >= min && item <= max) values.add(item);
+  });
+
   while (values.size < 3) {
     values.add(numberBetween(random, min, max));
   }
+
   return shuffle([...values].slice(0, 3), random);
 }
 
 function makeAddSubQuestion(random, limit, id) {
   const useAdd = random() > 0.45;
+  const isSmallRange = limit <= 20;
+  const addLeftMin = isSmallRange ? 1 : 10;
+  const addRightMin = isSmallRange ? 1 : 5;
+  const optionOffsets = isSmallRange ? [answer => answer - 1, answer => answer + 1, answer => answer + 2] : [answer => answer - 10, answer => answer - 2, answer => answer + 2, answer => answer + 10];
 
   if (useAdd) {
-    const left = numberBetween(random, 1, Math.max(2, limit - 2));
-    const right = numberBetween(random, 1, limit - left);
+    const left = numberBetween(random, addLeftMin, Math.max(addLeftMin, limit - addRightMin));
+    const right = numberBetween(random, addRightMin, limit - left);
     const answer = left + right;
     return {
       id,
       type: "choice",
       prompt: `${left} + ${right} = ?`,
-      options: uniqueOptions(answer, [answer - 1, answer + 1, answer + 2], random, 0, limit),
+      options: uniqueOptions(answer, optionOffsets.map((makeOffset) => makeOffset(answer)), random, 0, limit),
       answer,
-      hint: `可以从 ${left} 开始，往后数 ${right} 个。`,
+      hint: isSmallRange ? `可以从 ${left} 开始，往后数 ${right} 个。` : `可以先加整十，再处理个位：${left} 加 ${right}。`,
     };
   }
 
-  const left = numberBetween(random, 2, limit);
-  const right = numberBetween(random, 1, left - 1);
+  const left = numberBetween(random, isSmallRange ? 2 : 20, limit);
+  const right = numberBetween(random, addRightMin, left - 1);
   const answer = left - right;
   return {
     id,
     type: "choice",
     prompt: `${left} - ${right} = ?`,
-    options: uniqueOptions(answer, [answer - 1, answer + 1, answer + 2], random, 0, limit),
+    options: uniqueOptions(answer, optionOffsets.map((makeOffset) => makeOffset(answer)), random, 0, limit),
     answer,
-    hint: `可以从 ${left} 开始，往前数 ${right} 步。`,
+    hint: isSmallRange ? `可以从 ${left} 开始，往前数 ${right} 步。` : `可以先减整十，再处理个位：${left} 减 ${right}。`,
   };
 }
 
 function makeComposeQuestion(random, target, id) {
-  const first = numberBetween(random, 1, target - 1);
+  const minValue = target <= 20 ? 1 : 10;
+  const first = numberBetween(random, minValue, target - minValue);
   const second = target - first;
   const numbers = new Set([first, second]);
   while (numbers.size < 6) {
-    numbers.add(numberBetween(random, 1, target - 1));
+    numbers.add(numberBetween(random, minValue, target - minValue));
   }
 
   return {
@@ -106,8 +116,8 @@ function makeComposeQuestion(random, target, id) {
 }
 
 function makeCompareQuestion(random, id) {
-  const left = numberBetween(random, 1, 20);
-  const right = random() > 0.22 ? numberBetween(random, 1, 20) : left;
+  const left = numberBetween(random, 10, 100);
+  const right = random() > 0.2 ? numberBetween(random, 10, 100) : left;
   const answer = left > right ? ">" : left < right ? "<" : "=";
   const hint = answer === "=" ? "两边一样多。" : `${Math.max(left, right)} 更大。`;
   return {
@@ -122,17 +132,18 @@ function makeCompareQuestion(random, id) {
 }
 
 function makePatternQuestion(random, id) {
-  const step = numberBetween(random, 1, 5);
-  const isUp = random() > 0.25;
-  const start = isUp ? numberBetween(random, 1, 8) : numberBetween(random, 10, 20);
-  const sequence = [start, start + (isUp ? step : -step), start + (isUp ? step * 2 : -step * 2)];
-  const answer = start + (isUp ? step * 3 : -step * 3);
+  const step = numberBetween(random, 5, 15);
+  const isUp = random() > 0.3;
+  const start = isUp ? numberBetween(random, 5, 100 - step * 3) : numberBetween(random, 1 + step * 3, 100);
+  const direction = isUp ? 1 : -1;
+  const sequence = [start, start + direction * step, start + direction * step * 2];
+  const answer = start + direction * step * 3;
   return {
     id,
     type: "pattern",
     prompt: `${sequence.join("、")}、?`,
     sequence,
-    options: uniqueOptions(answer, [answer - step, answer + step, answer + 1], random, 0, 30),
+    options: uniqueOptions(answer, [answer - step, answer + step, answer + direction], random, 0, 100),
     answer,
     hint: `每次${isUp ? "多" : "少"} ${step}。`,
   };
@@ -146,39 +157,53 @@ function makeStoryQuestion(random, limit, id) {
   const useAdd = random() > 0.45;
 
   if (useAdd) {
-    const first = numberBetween(random, 2, Math.max(3, limit - 4));
-    const second = numberBetween(random, 1, limit - first);
+    const first = numberBetween(random, 10, Math.max(20, limit - 10));
+    const second = numberBetween(random, 5, limit - first);
     const answer = first + second;
     return {
       id,
       type: "story",
       prompt: `${name}有 ${first} 个${thing}，又找到 ${second} 个，现在有几个？`,
-      options: uniqueOptions(answer, [answer - 1, answer + 1, answer + 2], random, 0, limit),
+      options: uniqueOptions(answer, [answer - 10, answer - 2, answer + 2, answer + 10], random, 0, limit),
       answer,
-      hint: `把 ${first} 和 ${second} 合在一起。`,
+      hint: `把 ${first} 和 ${second} 合在一起，结果不超过 ${limit}。`,
     };
   }
 
-  const first = numberBetween(random, 4, limit);
-  const second = numberBetween(random, 1, first - 1);
+  const first = numberBetween(random, 20, limit);
+  const second = numberBetween(random, 5, first - 1);
   const answer = first - second;
   return {
     id,
     type: "story",
     prompt: `${name}有 ${first} 个${thing}，送出 ${second} 个，还剩几个？`,
-    options: uniqueOptions(answer, [answer - 1, answer + 1, answer + 2], random, 0, limit),
+    options: uniqueOptions(answer, [answer - 10, answer - 2, answer + 2, answer + 10], random, 0, limit),
     answer,
     hint: `用 ${first} 减去 ${second}。`,
   };
 }
 
+function makeNearHundredQuestion(random, id) {
+  const base = numberBetween(random, 35, 95);
+  const answer = 100 - base;
+  return {
+    id,
+    type: "choice",
+    prompt: `${base} + ? = 100`,
+    options: uniqueOptions(answer, [answer - 10, answer - 1, answer + 1, answer + 10], random, 0, 100),
+    answer,
+    hint: `${base} 到 100 还差 ${answer}。`,
+  };
+}
+
 function makeMixedQuestion(random, id) {
   const makers = [
-    () => makeAddSubQuestion(random, 20, id),
-    () => makeComposeQuestion(random, random() > 0.5 ? 10 : 20, id),
+    () => makeAddSubQuestion(random, 100, id),
+    () => makeComposeQuestion(random, 100, id),
+    () => makeNearHundredQuestion(random, id),
     () => makeCompareQuestion(random, id),
     () => makePatternQuestion(random, id),
-    () => makeStoryQuestion(random, 20, id),
+    () => makeStoryQuestion(random, 100, id),
   ];
   return makers[numberBetween(random, 0, makers.length - 1)]();
 }
@@ -188,7 +213,13 @@ function makeQuestionByMode(mode, random, id) {
   if (mode === "compose10") return makeComposeQuestion(random, 10, id);
   if (mode === "compare") return makeCompareQuestion(random, id);
   if (mode === "pattern") return makePatternQuestion(random, id);
-  if (mode === "addSub20") return random() > 0.35 ? makeAddSubQuestion(random, 20, id) : makeStoryQuestion(random, 20, id);
+  if (mode === "addSub20") return makeAddSubQuestion(random, 20, id);
+  if (mode === "addSub100") return makeAddSubQuestion(random, 100, id);
+  if (mode === "compose100") return random() > 0.25 ? makeComposeQuestion(random, 100, id) : makeNearHundredQuestion(random, id);
+  if (mode === "compare100") return makeCompareQuestion(random, id);
+  if (mode === "pattern100") return makePatternQuestion(random, id);
+  if (mode === "story100") return random() > 0.35 ? makeStoryQuestion(random, 100, id) : makeAddSubQuestion(random, 100, id);
+  if (mode === "mixed100") return makeMixedQuestion(random, id);
   return makeMixedQuestion(random, id);
 }
 
@@ -201,7 +232,7 @@ export function getTodayKey() {
 }
 
 export function generateLevelQuestions(level, count = 5) {
-  const mode = level.generator?.mode || "mixed";
+  const mode = level.generator?.mode || "mixed100";
   const total = level.generator?.count || count;
   const random = createRandom();
   return Array.from({ length: total }).map((_, index) => makeQuestionByMode(mode, random, `level-${level.id}-${Date.now()}-${index}`));
@@ -209,12 +240,12 @@ export function generateLevelQuestions(level, count = 5) {
 
 export function generateDailyChallenge(dateKey = getTodayKey()) {
   const random = createRandom(`daily-${dateKey}`);
-  const modes = ["addSub10", "compose10", "compare", "pattern", "addSub20"];
+  const modes = ["addSub100", "compose100", "compare100", "pattern100", "story100"];
   const questions = modes.map((mode, index) => makeQuestionByMode(mode, random, `daily-${dateKey}-${index}`));
   return {
     level: {
       ...DAILY_LEVEL,
-      mission: `完成 ${dateKey} 的 5 道今日专属题目`,
+      mission: `完成 ${dateKey} 的 5 道 100 以内专属题目`,
     },
     questions,
     dateKey,

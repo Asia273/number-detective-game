@@ -190,18 +190,18 @@ function HomeScreen({ progress, todayKey, onStart, onContinue, onDaily, onReset 
 
   return (
     <section className="hero card home-card">
-      <div className="forest-badge">森林侦探数学闯关</div>
+      <div className="forest-badge">100以内森林侦探数学闯关</div>
       <div className="hero-animal">侦</div>
       <h1>数字小侦探</h1>
-      <p>加入森林侦探队，帮助小动物收集线索、打开宝箱、拿到侦探徽章。</p>
+      <p>加入森林侦探队，挑战 100 以内加减、凑整、比较和规律题，帮助小动物收集线索、打开宝箱。</p>
       <button className="daily-challenge" onClick={onDaily}>
         <span>今日挑战 · {todayKey}</span>
-        <strong>{dailyRecord ? `今日最好成绩：${dailyRecord.correctCount}/${dailyRecord.totalCount}` : "5 道每日自动生成题"}</strong>
+        <strong>{dailyRecord ? `今日最好成绩：${dailyRecord.correctCount}/${dailyRecord.totalCount}` : "5 道100以内每日自动生成题"}</strong>
         <em>{dailyRecord ? `${"★".repeat(dailyRecord.stars)}${"☆".repeat(3 - dailyRecord.stars)}，还可以再挑战一次` : "当天题目固定，明天自动换新"}</em>
       </button>
       <div className="daily-mission">
         <strong>今日任务</strong>
-        <span>完成 1 个森林关卡，或挑战今天的猫头鹰谜题。</span>
+        <span>完成 1 个 100 以内森林关卡，或挑战今天的猫头鹰谜题。</span>
       </div>
       <div className="next-mission">
         <span>下一站</span>
